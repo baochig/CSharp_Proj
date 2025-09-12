@@ -1,0 +1,7 @@
+F:\pro\CHTSystemAwake\CHTSystemAwake\obj\x86\Debug\CHTSystemAwake.Properties.Resources.resources
+F:\pro\CHTSystemAwake\CHTSystemAwake\obj\x86\Debug\CHTSystemAwake.csproj.GenerateResource.Cache
+F:\pro\CHTSystemAwake\CHTSystemAwake\obj\x86\Debug\CHTSystemAwake.Form1.resources
+F:\pro\CHTSystemAwake\CHTSystemAwake\bin\Debug\CHTSystemAwake.exe
+F:\pro\CHTSystemAwake\CHTSystemAwake\bin\Debug\CHTSystemAwake.pdb
+F:\pro\CHTSystemAwake\CHTSystemAwake\obj\x86\Debug\CHTSystemAwake.exe
+F:\pro\CHTSystemAwake\CHTSystemAwake\obj\x86\Debug\CHTSystemAwake.pdb
