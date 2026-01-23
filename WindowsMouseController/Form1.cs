@@ -43,6 +43,9 @@ namespace WindowsMouseController
         const int WH_KEYBOARD_LL = 13; //for global hook
         const int KEYEVENTF_KEYUP = 0x0002;
 
+        const int INPUT_MOUSE = 0;
+        const int INPUT_KEYBOARD = 1;
+
         /// <summary>
         /// 透過windows user.dll，定義模擬滑鼠的各種API
         /// </summary>
@@ -52,8 +55,8 @@ namespace WindowsMouseController
         [DllImport("user32.dll", CharSet = CharSet.Auto, CallingConvention = CallingConvention.StdCall)]
         static extern bool SetCursorPos(int X, int Y);
 
-        [DllImport("user32.dll", CharSet = CharSet.Auto, CallingConvention = CallingConvention.StdCall)]
-        static extern void mouse_event(int dwFlags, int dx, int dy, int cButtons, int dwExtraInfo);
+        [DllImport("user32.dll", SetLastError = true)]
+        static extern uint SendInput(uint nInputs, INPUT[] pInputs, int cbSize);
 
         [DllImport("user32.dll", SetLastError = true)]
         static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
@@ -63,8 +66,42 @@ namespace WindowsMouseController
         //[DllImport("user32.dll", EntryPoint = "FindWindow", SetLastError = true)]
         //public static extern IntPtr FindWindow(IntPtr ZeroOnly, string lpWindowName);
 
-        [DllImport("user32.dll")]
-        public static extern void keybd_event(byte bVk, byte bScan, uint fwFlag, IntPtr dwExtraInfo);
+        [StructLayout(LayoutKind.Sequential)]
+        private struct INPUT
+        {
+            public int type;
+            public InputUnion U;
+        }
+
+        [StructLayout(LayoutKind.Explicit)]
+        private struct InputUnion
+        {
+            [FieldOffset(0)]
+            public MOUSEINPUT mi;
+            [FieldOffset(0)]
+            public KEYBDINPUT ki;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct MOUSEINPUT
+        {
+            public int dx;
+            public int dy;
+            public uint mouseData;
+            public uint dwFlags;
+            public uint time;
+            public IntPtr dwExtraInfo;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct KEYBDINPUT
+        {
+            public ushort wVk;
+            public ushort wScan;
+            public uint dwFlags;
+            public uint time;
+            public IntPtr dwExtraInfo;
+        }
 
 
         // 設置掛鉤.
@@ -86,7 +123,75 @@ namespace WindowsMouseController
             int xpos = Cursor.Position.X;
             int ypos = Cursor.Position.Y;
             this.textBox1.AppendText("Click position X = " + xpos.ToString() + ",Y = " + ypos.ToString() + "\r\n");
-            mouse_event(MOUSEEVENTF_LEFTDOWN | MOUSEEVENTF_LEFTUP, xpos, ypos, 0, 0);
+            SendLeftClick();
+        }
+
+        private void SendLeftClick()
+        {
+            INPUT[] inputs = new INPUT[2];
+            inputs[0] = new INPUT
+            {
+                type = INPUT_MOUSE,
+                U = new InputUnion
+                {
+                    mi = new MOUSEINPUT
+                    {
+                        dwFlags = MOUSEEVENTF_LEFTDOWN
+                    }
+                }
+            };
+            inputs[1] = new INPUT
+            {
+                type = INPUT_MOUSE,
+                U = new InputUnion
+                {
+                    mi = new MOUSEINPUT
+                    {
+                        dwFlags = MOUSEEVENTF_LEFTUP
+                    }
+                }
+            };
+
+            uint sent = SendInput((uint)inputs.Length, inputs, Marshal.SizeOf(typeof(INPUT)));
+            if (sent != inputs.Length)
+            {
+                Debug.WriteLine("SendInput (mouse) failed. Error: {0}", Marshal.GetLastWin32Error());
+            }
+        }
+
+        private void SendKey(ushort key)
+        {
+            INPUT[] inputs = new INPUT[2];
+            inputs[0] = new INPUT
+            {
+                type = INPUT_KEYBOARD,
+                U = new InputUnion
+                {
+                    ki = new KEYBDINPUT
+                    {
+                        wVk = key,
+                        dwFlags = 0
+                    }
+                }
+            };
+            inputs[1] = new INPUT
+            {
+                type = INPUT_KEYBOARD,
+                U = new InputUnion
+                {
+                    ki = new KEYBDINPUT
+                    {
+                        wVk = key,
+                        dwFlags = KEYEVENTF_KEYUP
+                    }
+                }
+            };
+
+            uint sent = SendInput((uint)inputs.Length, inputs, Marshal.SizeOf(typeof(INPUT)));
+            if (sent != inputs.Length)
+            {
+                Debug.WriteLine("SendInput (keyboard) failed. Error: {0}", Marshal.GetLastWin32Error());
+            }
         }
         private void TimerEventMouseMove(Object myObject, EventArgs myEventArgs) {
             int xpos = System.Windows.Forms.Cursor.Position.X;
@@ -113,8 +218,7 @@ namespace WindowsMouseController
                 int key = Convert.ToInt32(textKey.Text);
                 if (key != 0)
                 {
-                    keybd_event((byte)key, 0, 0, IntPtr.Zero);
-                    keybd_event((byte)key, 0, KEYEVENTF_KEYUP, IntPtr.Zero);
+                    SendKey((ushort)key);
                 }
             }
             Thread.Sleep(200);
@@ -282,9 +386,7 @@ namespace WindowsMouseController
                 int interval = Convert.ToInt32(textKeyInterval.Text);
                 if(key == 0 || interval == 0)
                     MessageBox.Show("鍵盤參數錯誤");
-                const int KEYEVENTF_KEYUP = 0x0002;
-                keybd_event((byte)key, 0, 0, IntPtr.Zero);
-                keybd_event((byte)key, 0, KEYEVENTF_KEYUP, IntPtr.Zero);
+                SendKey((ushort)key);
                 Thread.Sleep(interval * 1000);
                 Application.DoEvents(); 
             }
